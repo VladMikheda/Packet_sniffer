@@ -1,6 +1,7 @@
 
 #include "Sniffer.h"
 #include "ParseArguments.cpp"
+#include "PacketParse.cpp"
 #include <pcap.h>
 #include <iostream>
 #include <string>
@@ -140,50 +141,50 @@ private:
             //todo error
         }
 
-        pcap_loop(this->handler, 1, this->casadasdadll, nullptr);
+        pcap_loop(this->handler, 1, ParsePacket::packet_parse , nullptr);
         pcap_close(this->handler);
     }
 
 
-    static std::string returnRFCTime(timeval timePacket){
-
-        char time_buf[255];
-        char time_zone[8];
-        char ms[5];
-        struct tm *tm_time =  localtime(&timePacket.tv_sec);
-
-        strftime(time_zone,8,"%z",tm_time);
-        time_zone[6] = '\0';
-        time_zone[5] = time_zone[4];
-        time_zone[4] = time_zone[3];
-        time_zone[3] = ':';
-
-
-        long milliseconds = timePacket.tv_usec / 1000;
-        snprintf(ms,5,".%03ld",milliseconds);
-
-        strftime(time_buf,255,"%FT%T",tm_time);
-        return std::string(time_buf) + std::string(ms) + std::string (time_zone);
-
-    }
-
-    static void casadasdadll(u_char *args, const struct pcap_pkthdr *header, const u_char *packet){
-        std::cout << header->len << std::endl;
-        std::string packet_time = returnRFCTime(header->ts);
-        std::cout << packet_time << std::endl;
-
-        struct ether_header *ether_h;
-        ether_h = (ether_header*) packet;
-        printf("%X\n",ntohs(ether_h->ether_type));
-        if(ntohs(ether_h->ether_type) == 0x86DD){
-            struct ip6_hdr *ip6_header = (ip6_hdr*) (packet + 14);
-//            std::cout << ntohs(ip6_header->ip6r_type) << std::endl;
-            printf("%X\n",ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
-
-        }
-
-
+//    static std::string returnRFCTime(timeval timePacket){
+//
+//        char time_buf[255];
+//        char time_zone[8];
+//        char ms[5];
+//        struct tm *tm_time =  localtime(&timePacket.tv_sec);
+//
+//        strftime(time_zone,8,"%z",tm_time);
+//        time_zone[6] = '\0';
+//        time_zone[5] = time_zone[4];
+//        time_zone[4] = time_zone[3];
+//        time_zone[3] = ':';
+//
+//
+//        long milliseconds = timePacket.tv_usec / 1000;
+//        snprintf(ms,5,".%03ld",milliseconds);
+//
+//        strftime(time_buf,255,"%FT%T",tm_time);
+//        return std::string(time_buf) + std::string(ms) + std::string (time_zone);
+//
+//    }
+//
+//    static void casadasdadll(u_char *args, const struct pcap_pkthdr *header, const u_char *packet){
+//        std::cout << header->len << std::endl;
+//        std::string packet_time = returnRFCTime(header->ts);
+//        std::cout << packet_time << std::endl;
+//
+//        struct ether_header *ether_h;
+//        ether_h = (ether_header*) packet;
+//        printf("%X\n",ntohs(ether_h->ether_type));
+//        if(ntohs(ether_h->ether_type) == 0x86DD){
+//            struct ip6_hdr *ip6_header = (ip6_hdr*) (packet + 14);
+////            std::cout << ntohs(ip6_header->ip6r_type) << std::endl;
+//            printf("%X\n",ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+//
+//        }
 
 
-    }
+
+
+//    }
 };
