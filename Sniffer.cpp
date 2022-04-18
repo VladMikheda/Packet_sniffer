@@ -4,37 +4,46 @@
 #include <pcap.h>
 #include <iostream>
 #include <string>
-#include <cstring>
+#include <ctime>
+#include <unistd.h>
+#include <netinet/ether.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip6.h>
+#include <netinet/ip.h>
 
 class Sniffer {
 private:
     ParseArguments parseArguments;
-    pcap_t* handler;
-    bpf_u_int32 ip;
-    bpf_u_int32 netmask;
+    pcap_t* handler{};
+    bpf_u_int32 ip{};
+    bpf_u_int32 netmask{};
+    char errbuf[PCAP_ERRBUF_SIZE]{};
 public:
 
-    Sniffer(ParseArguments parseArguments){
+    explicit Sniffer(ParseArguments parseArguments){
         this->parseArguments = parseArguments;
     }
     void startSniff(){
-        char errbuf[PCAP_ERRBUF_SIZE];
+        if(!this->parseArguments.getAnInterface()){
+            outPutAllInterface();
+        }
+
+        //наставим маску и ip
         if(pcap_lookupnet(this->parseArguments.getAnInterface(), &ip, &netmask, errbuf) == -1){
             exit(112);
         }
-        std::cout << this->parseArguments.getAnInterface() << std::endl;
-        openInterface(this->parseArguments.getAnInterface());
+        //open interface
+        openHandler(this->parseArguments.getAnInterface());
         setFilter();
-
+//        pcap_loop(this->handler, 1, this->casadasdadll, nullptr);
+//        pcap_close(this->handler);
     }
 
 private:
-    void openInterface(char *nameInterface){
-//        outPutAllInterface();
-        char errbuf[PCAP_ERRBUF_SIZE];
+    void openHandler(char *nameInterface){
         this->handler = pcap_open_live(nameInterface, BUFSIZ,1,-1,errbuf);
         if(!this->handler){
-            std::cout << errbuf << std::endl;
             exit(112);
             //todo error
         }
@@ -46,7 +55,6 @@ private:
     }
 
     void outPutAllInterface(){
-        char errbuf[PCAP_ERRBUF_SIZE];
         pcap_if_t *interfaceList;
         if(pcap_findalldevs(&interfaceList,errbuf) == -1){
             exit(112);
@@ -68,19 +76,19 @@ private:
         bool flagIA = false;
         bool flagP = false;
         if(parseArguments.isUdp()){
-            stringFilter = stringFilter + "( udp";
+            stringFilter = stringFilter + "(udp";
 
             if(!port.empty()){
                 stringFilter = stringFilter  + " and port " + port;
             }
 
-            stringFilter = stringFilter + " )";
+            stringFilter = stringFilter + ")";
             flagUT = true;
             flagP = true;
         }
         if(parseArguments.isTcp()){
             if(flagUT){
-                stringFilter = stringFilter + " or";
+                stringFilter = stringFilter + " or ";
             }
             stringFilter = stringFilter + "(tcp";
 
@@ -94,30 +102,32 @@ private:
         }
         if(parseArguments.isIcmp()){
             if(flagUT){
-                stringFilter = stringFilter + " or";
+                stringFilter = stringFilter + " or ";
             }
-            stringFilter = stringFilter + " icmp";
+            stringFilter = stringFilter + "icmp";
             flagIA = true;
         }
         if(parseArguments.isArp()){
             if(flagUT || flagIA){
-                stringFilter = stringFilter + " or";
+                stringFilter = stringFilter + " or ";
             }
-            stringFilter = stringFilter + " arp";
+            stringFilter = stringFilter + "arp";
             flagIA = true;
         }
         if(!port.empty() && !flagP){
             if(!flagIA){
                 stringFilter = "port " + port;
+                flagP = true;
             }else{
-                stringFilter = stringFilter + "or port " + port;
+                stringFilter = stringFilter + " or port " + port;
+                flagP = true;
             }
         }
         if(!flagUT && !flagIA && !flagP){
             stringFilter = "udp or tcp or arp or icmp";
         }
         std::cout << stringFilter << std::endl;
-        bpf_program filterCompStruct;
+        bpf_program filterCompStruct{};
 
 
         if (pcap_compile(this->handler,&filterCompStruct, stringFilter.c_str(), 0, this->ip) == -1){
@@ -130,15 +140,50 @@ private:
             //todo error
         }
 
-        struct pcap_pkthdr header;
-
-        const u_char *packet;
-
-       while(1){
-            packet = pcap_next(this->handler, &header);
-            std::cout << header.len << std::endl;
-        }
+        pcap_loop(this->handler, 1, this->casadasdadll, nullptr);
         pcap_close(this->handler);
     }
 
+
+    static std::string returnRFCTime(timeval timePacket){
+
+        char time_buf[255];
+        char time_zone[8];
+        char ms[5];
+        struct tm *tm_time =  localtime(&timePacket.tv_sec);
+
+        strftime(time_zone,8,"%z",tm_time);
+        time_zone[6] = '\0';
+        time_zone[5] = time_zone[4];
+        time_zone[4] = time_zone[3];
+        time_zone[3] = ':';
+
+
+        long milliseconds = timePacket.tv_usec / 1000;
+        snprintf(ms,5,".%03ld",milliseconds);
+
+        strftime(time_buf,255,"%FT%T",tm_time);
+        return std::string(time_buf) + std::string(ms) + std::string (time_zone);
+
+    }
+
+    static void casadasdadll(u_char *args, const struct pcap_pkthdr *header, const u_char *packet){
+        std::cout << header->len << std::endl;
+        std::string packet_time = returnRFCTime(header->ts);
+        std::cout << packet_time << std::endl;
+
+        struct ether_header *ether_h;
+        ether_h = (ether_header*) packet;
+        printf("%X\n",ntohs(ether_h->ether_type));
+        if(ntohs(ether_h->ether_type) == 0x86DD){
+            struct ip6_hdr *ip6_header = (ip6_hdr*) (packet + 14);
+//            std::cout << ntohs(ip6_header->ip6r_type) << std::endl;
+            printf("%X\n",ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+
+        }
+
+
+
+
+    }
 };
