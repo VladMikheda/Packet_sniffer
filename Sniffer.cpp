@@ -19,7 +19,7 @@ private:
     pcap_t* handler{};
     bpf_u_int32 ip{};
     bpf_u_int32 netmask{};
-    char errbuf[PCAP_ERRBUF_SIZE]{};
+    char errbuf[PCAP_ERRBUF_SIZE] = {0};
 public:
 
     explicit Sniffer(ParseArguments parseArguments){
@@ -28,6 +28,7 @@ public:
     void startSniff(){
         if(!this->parseArguments.getAnInterface()){
             outPutAllInterface();
+            return;
         }
 
         //наставим маску и ip
@@ -56,14 +57,24 @@ private:
     }
 
     void outPutAllInterface(){
-        pcap_if_t *interfaceList;
+        pcap_if_t *interfaceList = nullptr;
         if(pcap_findalldevs(&interfaceList,errbuf) == -1){
             exit(112);
         }
-        while(interfaceList != nullptr){
-            std::cout << interfaceList->name << std::endl;
-            interfaceList = interfaceList->next;
+
+        pcap_if_t *interface_ptr = interfaceList;
+        while(interface_ptr != nullptr){
+            std::cout << interface_ptr->name << std::endl;
+            interface_ptr = interface_ptr->next;
         }
+        interface_ptr = nullptr;
+        pcap_freealldevs(interfaceList);
+//        //todo ???
+//        while(ptr!= nullptr){
+//            interfaceList = ptr->next;
+//            free(ptr);
+//            ptr = interfaceList;
+//        }
 
     }
 
@@ -105,7 +116,7 @@ private:
             if(flagUT){
                 stringFilter = stringFilter + " or ";
             }
-            stringFilter = stringFilter + "icmp";
+            stringFilter = stringFilter + "icmp or icmp6";
             flagIA = true;
         }
         if(parseArguments.isArp()){
@@ -125,7 +136,7 @@ private:
             }
         }
         if(!flagUT && !flagIA && !flagP){
-            stringFilter = "udp or tcp or arp or icmp";
+            stringFilter = "udp or tcp or arp or icmp or icmp6";
         }
         std::cout << stringFilter << std::endl;
         bpf_program filterCompStruct{};
@@ -140,6 +151,7 @@ private:
             exit(112);
             //todo error
         }
+        pcap_freecode(&filterCompStruct);
 
         pcap_loop(this->handler, 1, ParsePacket::packet_parse , nullptr);
         pcap_close(this->handler);
