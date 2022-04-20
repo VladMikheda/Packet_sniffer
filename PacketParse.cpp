@@ -50,6 +50,7 @@ private:
 
     static void ip4_parse(iphdr *ip4_header, std::string *all_info){
         *all_info = *all_info +"Internet Protocol Version 4 (IPv4)\n";
+        *all_info = *all_info + "   Time to Live: " + std::to_string(ip4_header->ttl) + "\n";
         char ip[INET_ADDRSTRLEN];
         memset(ip,0,INET_ADDRSTRLEN);
         inet_ntop(AF_INET,(const void*)(&ip4_header->saddr),ip, INET_ADDRSTRLEN);
@@ -61,11 +62,13 @@ private:
 
 
     static void ip6_parse(ip6_hdr *ip6_header, std::string *all_info){
-        *all_info = *all_info +"Internet Protocol Version 6 (IPv6)\n";
         char ip[INET6_ADDRSTRLEN];
+        *all_info = *all_info +"Internet Protocol Version 6 (IPv6)\n";
+        *all_info = *all_info + "   Hop Limit: " + std::to_string(ip6_header->ip6_ctlun.ip6_un1.ip6_un1_hlim) + "\n";
         memset(ip,0,INET6_ADDRSTRLEN);
         inet_ntop(AF_INET6,(const void*)(&ip6_header->ip6_src),ip, INET6_ADDRSTRLEN);
         *all_info = *all_info + "   src IP: " + std::string(ip) + "\n";
+
         memset(ip,0,INET6_ADDRSTRLEN);
         inet_ntop(AF_INET6,(const void*)(&ip6_header->ip6_dst),ip, INET6_ADDRSTRLEN);
         *all_info = *all_info + "   dst IP: " + std::string(ip) + "\n";
@@ -73,8 +76,11 @@ private:
 
     static void tcp_parse(struct tcphdr *tcp_header, std::string *all_info){
         *all_info = *all_info + "Transmission Control Protocol (TCP)\n";
-        *all_info = *all_info + "  src port: " + std::to_string(ntohs(tcp_header->source)) + "\n";
-        *all_info = *all_info + "  dst port: " + std::to_string(ntohs(tcp_header->dest)) + "\n";
+        *all_info = *all_info + "   src port: " + std::to_string(ntohs(tcp_header->source)) + "\n";
+        *all_info = *all_info + "   dst port: " + std::to_string(ntohs(tcp_header->dest)) + "\n";
+        *all_info = *all_info + "   Sequence number: " + std::to_string(ntohl(tcp_header->seq)) + "\n";
+        *all_info = *all_info + "   Acknowledgment number: " + std::to_string(ntohl(tcp_header->ack_seq)) + "\n";
+
     }
 
     static void udp_parse(struct udphdr *udp_header, std::string *all_info){
@@ -96,10 +102,23 @@ private:
     }
 
     static void arp_parse(struct arphdr* arp_header,struct ether_arp* ether_arp_header, std::string * all_info){
-        *all_info = *all_info + "Addres Resolution Protocol (ARP)\n";
-        if(ntohs(arp_header->ar_pro )== 0x0800){
-            *all_info = *all_info + "Protocol type IPv4\n";
+        *all_info = *all_info + "Addres Resolution Protocol (ARP) ";
+
+        std::string opcode = "";
+        if(ntohs(arp_header->ar_op )== 0x0001){
+            *all_info = *all_info + "(request)\n";
+            opcode = "request (1)";
+        }else if(ntohs(arp_header->ar_op)== 0x0002){
+            *all_info = *all_info + "(reply)\n";
+            opcode = "reply (2)";
+        }else{
+            *all_info = *all_info + "\n";
         }
+
+        if(ntohs(arp_header->ar_pro )== 0x0800){
+            *all_info = *all_info + "   Protocol type IPv4\n";
+        }
+        *all_info = *all_info + "   Opcode: " + opcode + "\n";
         const u_int8_t LEN_MAC = sizeof("RA:ND:OM:MA:CA:DD");
         char buffer[LEN_MAC];
         memset(buffer,0,LEN_MAC);
@@ -222,11 +241,5 @@ public:
             slider++;
         }
         printf(" %s\n",buff_ascii);
-//        if(ntohs(ether_h->ether_type) == 0x86DD){
-//            struct ip6_hdr *ip6_header = (ip6_hdr*) (packet + 14);
-//            std::cout << ntohs(ip6_header->ip6r_type) << std::endl;
-//            printf("%X\n",ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
-//
-//        }
     }
 };

@@ -153,7 +153,7 @@ private:
         }
         pcap_freecode(&filterCompStruct);
 
-        pcap_loop(this->handler, 1, ParsePacket::packet_parse , nullptr);
+        pcap_loop(this->handler, (int)parseArguments.getNum(), ParsePacket::packet_parse , nullptr);
         pcap_close(this->handler);
     }
 
