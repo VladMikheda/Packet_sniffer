@@ -1,41 +1,131 @@
-
+/**
+ * Project: Sniffer paketů (Varianta ZETA)
+ *
+ * File:     ParseArguments.cpp
+ * Subject:  IPK 2022
+ *
+ * @author:  Vladislav Mikheda  xmikhe00
+ */
 
 #include <getopt.h>
 #include <iostream>
+#include <cstdlib>
 
+#define ERROR_ARGUMENT 1
+#define IT_IS_OK 0
 
+/**
+ * The class parses the arguments passed to users and checks them
+ */
 class ParseArguments {
 
-
 private:
+    //arguments
     char *interface = nullptr;
     char *port = nullptr;
     bool tcp = false;
     bool udp = false;
     bool icmp = false;
     bool arp = false;
-    unsigned int num = 1;
+    unsigned int num = 1; //by default, only one packet will be read.
+    //const
+    const static int MAX_NUMBER_PORT = 65535;
+    const static int MIN_NUMBER_PORT = 1;
 
 
-    void help(){
-        printf("help");
+    /**
+     * The method writes help information to standard output
+     */
+    static void help(){
+        std::cout << "Usage:" << std::endl;
+        std::cout << "\t ./ipk-sniffer [-i interface | --interface interface] {-p port} {[--tcp | -t] "
+                     "[--udp | -u] [--arp] [--icmp]} {-n num}" << std::endl;
+        std::cout << "-i --interface \t the interface in which it will listen,"
+                     " if the parameter has no value or is not set, "
+                     "a list of all interfaces will be written out" << std::endl;
+
+        std::cout << "-p \t port on which packets will be filtered,"
+                     " if the port is not set, packets will not be filtered, "
+                     "сan be from 1 to 65535" << std::endl;
+
+        std::cout << "-t --tcp \t only TCP packets will be filtered" << std::endl;
+        std::cout << "--udp \t only UDP packets will be filtered" << std::endl;
+        std::cout << "--icmp \t only ICMP and ICMPv6 packets will be filtered" << std::endl;
+        std::cout << "--arp \t only ARP frame will be filtered" << std::endl;
+        std::cout << "-n \t onumber of packets to filter" << std::endl;
+    }
+
+    /**
+     * The method checks if the port number is correct
+     */
+    void port_check(){
+        // port number must not contain +
+        if(this->port[0] == '+'){
+            std::cerr << "ERROR: The port is incorrect or not specified" << std::endl;
+            help();
+            exit(ERROR_ARGUMENT);
+        }
+        int port_int;
+        try{
+            port_int = std::stoi(this->port,nullptr,10);
+        }
+        catch(std::exception const& e ) {
+            std::cerr << "ERROR: The port is incorrect or not specified" << std::endl;
+            help();
+            exit(ERROR_ARGUMENT);
+        }
+        if(port_int > MAX_NUMBER_PORT || port_int < MIN_NUMBER_PORT){
+            std::cerr << "ERROR: The port is incorrect or not specified" << std::endl;
+            help();
+            exit(ERROR_ARGUMENT);
+        }
+    }
+
+    /**
+     * the method checks if the number of packets to read is set correctly
+     * @param optи user-specified argument
+     */
+    void num_check(const char* opt){
+        try{
+            int check_number = std::stoi(opt, nullptr, 10);
+            if(check_number < 0) {
+                std::cerr << "the -n option is incorrect" << std::endl;
+                help();
+            }else{
+                this->num = check_number;
+            }
+        }
+        catch(std::invalid_argument & e){
+            std::cerr << "the -n option is incorrect" << std::endl;
+            help();
+            exit(ERROR_ARGUMENT);
+        }
+        catch (std::overflow_error & e){
+            std::cerr << "the -n option is incorrect" << std::endl;
+            help();
+            exit(ERROR_ARGUMENT);
+        }
+        catch (std::out_of_range & e){
+            std::cerr << "the -n option is incorrect" << std::endl;
+            help();
+            exit(ERROR_ARGUMENT);
+        }
     }
 
 public:
 
     void startParse(int argc, char **argv){
 
-        const char* const shortOpt = "ti:p:n:u::";
-//        const char* const shortOpt = "t";
+//        const char* const shortOpt = "ti:p:n:u::";
+        const char* const shortOpt = "ti:p:n:u";
         int index = 0;
+        opterr = 0;
         const option longOpts[] = {
                 {"arp",0, &index, 0},
                 {"icmp",0, &index, 1},
-                {"interface",1, nullptr,'i'},
+                {"interface",2, nullptr,'i'},
                 {"tcp",0, nullptr,'t'},
                 {"udp",0, nullptr,'u'},
-                {nullptr, 1, nullptr,'p'},
-                {nullptr,1, nullptr, 'n'},
                 {0,0,0,0}
         };
         while(true){
@@ -43,7 +133,6 @@ public:
             if(arg == -1){
                 break;
             }
-
             switch (arg) {
                 case 0:
                     if(index == 0){
@@ -53,10 +142,21 @@ public:
                     }
                     break;
                 case'i':
+                    if(this->interface){
+                        std::cerr << "ERROR: Interface must be set only once" << std::endl;
+                        help();
+                        exit(IT_IS_OK);
+                    }
                     this->interface = optarg;
                     break;
                 case 'p':
+                    if(this->port){
+                        std::cerr << "ERROR: Port must be set only once" << std::endl;
+                        help();
+                        exit(IT_IS_OK);
+                    }
                     this->port = optarg;
+                    port_check();
                     break;
                 case 't':
                     this->tcp = true;
@@ -65,19 +165,23 @@ public:
                     this->udp = true;
                     break;
                 case 'n':
-                    this->num = std::stoi(optarg, nullptr, 10);
-                    //todo error
+                    num_check(optarg);
+                    break;
+                case '?':
+                    if(optopt != 'i'){
+                        help();
+                        exit(IT_IS_OK);
+                    }
                     break;
                 default:
                     help();
-                    exit(0);
-                    //todo error
-                    break;
+                    exit(IT_IS_OK);
+
             }
         }
     }
 
-
+// getters
     char *getAnInterface() const {
         return interface;
     }

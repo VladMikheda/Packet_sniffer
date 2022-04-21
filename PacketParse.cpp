@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 #include <ctime>
-#include <unistd.h>
 #include <netinet/ether.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -14,28 +13,37 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+#define LEN_TIME_BUFFER 30      //len time buffer for "2021-03-19T18:42:52.362+01:00" + "\0" 28 + 1 + 1 -> 30
+#define LEN_ZONE_BUFFER 8       // "+0000" + ":" + "\0" 5 + 2 + 1 ->8
+#define LEN_MC_BUFFER   6        // ".012" + "\0" 4 + 1 + 1-> 6
+#define FIRST_
 
 class ParsePacket {
 
 private:
     static std::string return_RFC_time(timeval timePacket){
 
-        char time_buf[255];
-        char time_zone[8];
-        char ms[5];
-        struct tm *tm_time =  localtime(&timePacket.tv_sec);
+        char time_buf[LEN_TIME_BUFFER];
+        char time_zone[LEN_ZONE_BUFFER];
+        char ms[LEN_MC_BUFFER];
 
-        strftime(time_zone,8,"%z",tm_time);
-        time_zone[6] = '\0';
-        time_zone[5] = time_zone[4];
-        time_zone[4] = time_zone[3];
-        time_zone[3] = ':';
+        memset(time_buf,0,LEN_TIME_BUFFER);
+        memset(time_zone,0,LEN_ZONE_BUFFER);
+        memset(ms,0,LEN_MC_BUFFER);
+
+        struct tm *s_tm_time =  localtime(&timePacket.tv_sec);
+
+        strftime(time_zone,LEN_ZONE_BUFFER,"%z",s_tm_time); // "+0000"
+        time_zone[6] = '\0';            // "+1234_\n"
+        time_zone[5] = time_zone[4];    // "+12344\n"
+        time_zone[4] = time_zone[3];    // "+12334\n"
+        time_zone[3] = ':';             // "+12:34\n"
 
 
         long milliseconds = timePacket.tv_usec / 1000;
-        snprintf(ms,5,".%03ld",milliseconds);
+        snprintf(ms,LEN_MC_BUFFER,".%03ld",milliseconds); // ".012"
 
-        strftime(time_buf,255,"%FT%T",tm_time);
+        strftime(time_buf,LEN_TIME_BUFFER,"%FT%T",s_tm_time);
         return std::string(time_buf) + std::string(ms) + std::string (time_zone);
 
     }
@@ -45,7 +53,7 @@ private:
         char buffer[LEN_MAC];
         memset(buffer,0,LEN_MAC);
         snprintf(buffer,LEN_MAC,"%02x:%02x:%02x:%02x:%02x:%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
-        return std::string(buffer);
+        return buffer;
     }
 
     static void ip4_parse(iphdr *ip4_header, std::string *all_info){
@@ -104,7 +112,8 @@ private:
     static void arp_parse(struct arphdr* arp_header,struct ether_arp* ether_arp_header, std::string * all_info){
         *all_info = *all_info + "Addres Resolution Protocol (ARP) ";
 
-        std::string opcode = "";
+        std::string opcode;
+        opcode = "";
         if(ntohs(arp_header->ar_op )== 0x0001){
             *all_info = *all_info + "(request)\n";
             opcode = "request (1)";
@@ -147,34 +156,33 @@ public:
         std::string all_info;
         struct ether_header *ether_h;
         ether_h = (ether_header*) packet;
-        all_info = "Timestamp: " + return_RFC_time(header->ts) + "\n";
-        all_info = all_info + "Frame length: " + std::to_string(header->len) + " bytes " + "(" + std::to_string(header->len * 8) + " bits)\n"; // add frame len
-        all_info = all_info + "Ethernet\n";
-        all_info = all_info + "   src MAC: " + mac_parse(ether_h->ether_shost) + "\n"; //src
-        all_info = all_info + "   dst MAC: " + mac_parse(ether_h->ether_dhost) + "\n"; //src
+        all_info = "   timestamp: " + return_RFC_time(header->ts) + "\n";
+        all_info = all_info + "   src MAC: " + std::string(mac_parse(ether_h->ether_shost)) + "\n"; //src
+        all_info = all_info + "   dst MAC: " + std::string(mac_parse(ether_h->ether_dhost)) + "\n"; //dst
+        all_info = all_info + "   frame length: " + std::to_string(header->len) + " bytes " + "(" + std::to_string(header->len * 8) + " bits)\n"; // add frame len
 
         switch(ntohs(ether_h->ether_type)){
             case 0x0800: {
                 all_info = all_info + "   Type: IPv4\n"; //src
-                struct iphdr *ip4_header = (iphdr *) (packet + 14);
+                auto *ip4_header = (iphdr *) (packet + 14);
                 ip4_parse(ip4_header,&all_info);
                 int ip4_len = ip4_header->ihl * 4;
                 switch (ip4_header->protocol){
                     case 0x06: {
                         //tcp
-                        struct tcphdr *tcp_header = (tcphdr *) (packet + 14 + ip4_len);
+                        auto *tcp_header = (tcphdr *) (packet + 14 + ip4_len);
                         tcp_parse(tcp_header, &all_info);
                         break;
                     }
                     case 0x11: {
                         //udp
-                        struct udphdr *udp_header = (udphdr *) (packet + 14 + ip4_len);
+                        auto *udp_header = (udphdr *) (packet + 14 + ip4_len);
                         udp_parse(udp_header, &all_info);
                         break;
                     }
                     case 0x01: {
                         //ICMP
-                        struct icmphdr *icmp_header = (icmphdr *) (packet + 14 + ip4_len);
+                        auto *icmp_header = (icmphdr *) (packet + 14 + ip4_len);
                         icmp_parse(icmp_header, &all_info);
                         break;
                     }
@@ -183,21 +191,21 @@ public:
             }
             case 0x86DD: {
                 all_info = all_info + "   Type: IPv6\n"; //src
-                struct ip6_hdr *ip6_header = (ip6_hdr *) (packet + 14);
+                auto *ip6_header = (ip6_hdr*) (packet + 14);
                 ip6_parse(ip6_header,&all_info);
                 switch (ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt) {
                     case 0x06: {//tcp
-                        struct tcphdr *tcp_header = (tcphdr *) (packet + 14 + 40);
+                        auto *tcp_header = (tcphdr*) (packet + 14 + 40);
                         tcp_parse(tcp_header, &all_info);
                         break;
                     }
                     case 0x11: {//udp
-                        struct udphdr *udp_header = (udphdr *) (packet + 14 + 40);
+                        auto *udp_header = (udphdr*) (packet + 14 + 40);
                         udp_parse(udp_header, &all_info);
                         break;
                     }
                     case 0x3A: {//ICMP
-                        struct icmp6_hdr *icmp6_header = (icmp6_hdr *) (packet + 14 + 40);
+                        auto *icmp6_header = (icmp6_hdr*) (packet + 14 + 40);
                         icmp6_parse(icmp6_header, &all_info);
                         break;
                     }
@@ -205,8 +213,8 @@ public:
                 break;
             }
             case 0x0806:{
-                struct arphdr *arp_header = (arphdr*) (packet + 14);
-                struct ether_arp *ether_arp_header = (ether_arp *) (packet + 14);
+                auto *arp_header = (arphdr*) (packet + 14);
+                auto *ether_arp_header = (ether_arp*) (packet + 14);
                 arp_parse(arp_header,ether_arp_header, &all_info);
             }
         }
@@ -216,7 +224,7 @@ public:
         printf("0x%04x: ",num_row);
         char buff_ascii[17];
         memset(buff_ascii,0,17);
-        int slider = 0;
+        u_int64_t slider = 0;
         for(; slider < header->len; slider++){
             printf("%02x ",packet[slider]);
             if(int(packet[slider]) < 32 || int(packet[slider]) > 127){
