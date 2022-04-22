@@ -7,12 +7,8 @@
  * @author:  Vladislav Mikheda  xmikhe00
  */
 
-#include <getopt.h>
-#include <iostream>
-#include <cstdlib>
+#include "ParseArguments.h"
 
-#define ERROR_ARGUMENT 1
-#define IT_IS_OK 0
 
 /**
  * The class parses the arguments passed to users and checks them
@@ -126,7 +122,7 @@ public:
                 {"interface",2, nullptr,'i'},
                 {"tcp",0, nullptr,'t'},
                 {"udp",0, nullptr,'u'},
-                {0,0,0,0}
+                {nullptr,0, nullptr,0}
         };
         while(true){
             const auto arg = getopt_long(argc,argv,shortOpt, longOpts, nullptr);
