@@ -119,7 +119,7 @@ public:
         const option longOpts[] = {
                 {"arp",0, &index, 0},
                 {"icmp",0, &index, 1},
-                {"interface",2, nullptr,'i'},
+                {"interface",1, nullptr,'i'},
                 {"tcp",0, nullptr,'t'},
                 {"udp",0, nullptr,'u'},
                 {nullptr,0, nullptr,0}
@@ -164,7 +164,9 @@ public:
                     num_check(optarg);
                     break;
                 case '?':
-                    if(optopt != 'i'){
+                    if(optopt == 'i'){
+                        return;
+                    }else{
                         help();
                         exit(IT_IS_OK);
                     }

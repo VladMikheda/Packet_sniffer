@@ -50,6 +50,7 @@
 #define TCP  0x06
 #define UDP  0x11
 #define ICMP 0x01
+#define ICMPv6 0x3A
 #define ARP  0x0806
 #define IPv4 0x0800
 #define IPv6 0x86DD

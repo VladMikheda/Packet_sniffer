@@ -351,7 +351,7 @@ public:
                         udp_parse(udp_header, &all_info);
                         break;
                     }
-                    case ICMP: {
+                    case ICMPv6: {
                         //struct for ICMP header
                         auto *icmp6_header = (icmp6_hdr*) (packet + LEN_ETHERNET_FRAME + LEN_IPv6_HEADER);
                         //call ICMP packed parse method
