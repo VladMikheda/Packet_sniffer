@@ -34,21 +34,21 @@ private:
      */
     static void help(){
         std::cout << "Usage:" << std::endl;
-        std::cout << "\t ./ipk-sniffer [-i interface | --interface interface] {-p port} {[--tcp | -t] "
-                     "[--udp | -u] [--arp] [--icmp]} {-n num}" << std::endl;
-        std::cout << "-i --interface \t the interface in which it will listen,"
-                     " if the parameter has no value or is not set, "
-                     "a list of all interfaces will be written out" << std::endl;
+        std::cout << "\t ./ipk-sniffer [-i interface | --interface interface] {-p port} {[--tcp | -t]"
+                     "[--udp | -u] [--arp] [--icmp]} {-n num}\n\n" << std::endl;
+        std::cout << "-i    --interface        the interface in which it will listen,\n"
+                     "                         if the parameter has no value or is not set,\n"
+                     "                         a list of all interfaces will be written out\n" << std::endl;
 
-        std::cout << "-p \t port on which packets will be filtered,"
-                     " if the port is not set, packets will not be filtered, "
-                     "сan be from 1 to 65535" << std::endl;
+        std::cout << "-p                       port on which packets will be filtered,\n"
+                     "                         if the port is not set, packets will not be filtered,\n "
+                     "                         сan be from 1 to 65535\n" << std::endl;
 
-        std::cout << "-t --tcp \t only TCP packets will be filtered" << std::endl;
-        std::cout << "--udp \t only UDP packets will be filtered" << std::endl;
-        std::cout << "--icmp \t only ICMP and ICMPv6 packets will be filtered" << std::endl;
-        std::cout << "--arp \t only ARP frame will be filtered" << std::endl;
-        std::cout << "-n \t onumber of packets to filter" << std::endl;
+        std::cout << "-t    --tcp              only TCP packets will be filtered" << std::endl;
+        std::cout << "--udp                    only UDP packets will be filtered" << std::endl;
+        std::cout << "--icmp                   only ICMP and ICMPv6 packets will be filtered" << std::endl;
+        std::cout << "--arp                    only ARP frame will be filtered" << std::endl;
+        std::cout << "-n                       number of packets to filter" << std::endl;
     }
 
     /**
@@ -87,6 +87,7 @@ private:
             if(check_number < 0) {
                 std::cerr << "the -n option is incorrect" << std::endl;
                 help();
+                exit(ERROR_ARGUMENT);
             }else{
                 this->num = check_number;
             }
@@ -113,13 +114,14 @@ public:
     void startParse(int argc, char **argv){
 
 //        const char* const shortOpt = "ti:p:n:u::";
-        const char* const shortOpt = "ti:p:n:u";
+        const char* const shortOpt = "thi:p:n:u";
         int index = 0;
         opterr = 0;
         const option longOpts[] = {
                 {"arp",0, &index, 0},
                 {"icmp",0, &index, 1},
                 {"interface",1, nullptr,'i'},
+                {"help",0, nullptr,'h'},
                 {"tcp",0, nullptr,'t'},
                 {"udp",0, nullptr,'u'},
                 {nullptr,0, nullptr,0}
@@ -141,7 +143,7 @@ public:
                     if(this->interface){
                         std::cerr << "ERROR: Interface must be set only once" << std::endl;
                         help();
-                        exit(IT_IS_OK);
+                        exit(ERROR_ARGUMENT);
                     }
                     this->interface = optarg;
                     break;
@@ -149,7 +151,7 @@ public:
                     if(this->port){
                         std::cerr << "ERROR: Port must be set only once" << std::endl;
                         help();
-                        exit(IT_IS_OK);
+                        exit(ERROR_ARGUMENT);
                     }
                     this->port = optarg;
                     port_check();
@@ -163,17 +165,20 @@ public:
                 case 'n':
                     num_check(optarg);
                     break;
+                case 'h':
+                    help();
+                    exit(IT_IS_OK);
                 case '?':
                     if(optopt == 'i'){
                         return;
                     }else{
                         help();
-                        exit(IT_IS_OK);
+                        exit(ERROR_ARGUMENT);
                     }
                     break;
                 default:
                     help();
-                    exit(IT_IS_OK);
+                    exit(ERROR_ARGUMENT);
 
             }
         }

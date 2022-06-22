@@ -60,9 +60,13 @@ public:
             exit(ERROR_PCAP_NOT_SET_FILTER);
         }
 
+        u_char flag = 0;
+        if((int)parse_arguments.getNum() > 1){
+            flag = 1;
+        }
         //the function from the "pcap" library, sniffed the packet and
         // called the method to parse the packet in the ParsePacket class
-        pcap_loop(this->handler, (int)parse_arguments.getNum(), ParsePacket::packet_parse , nullptr);
+        pcap_loop(this->handler, (int)parse_arguments.getNum(), ParsePacket::packet_parse , &flag);
         pcap_close(this->handler);
     }
 

@@ -22,7 +22,7 @@
 #define ERROR_PCAP_NOT_OPEN_HANDLER 15
 #define ERROR_PCAP_LINK_TYPE 16
 #define MAX_LEN_PACKET 65535
-#define TO_MC 100
+#define TO_MC 1000
 #define PROM_MOD 1
 #define START true
 #define STOP false

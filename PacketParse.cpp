@@ -283,6 +283,13 @@ public:
      * @param packet
      */
     static void packet_parse(u_char *args, const struct pcap_pkthdr *header, const u_char *packet){
+        //the flag indicates that more than 1 packet is being read
+        static u_char flag = 0;
+        //if the flag is 1, the line will be indented so that the data does not merge
+        if(flag == 1){
+            printf("\n");
+        }
+        flag= *args;
 
         std::string all_info; //string for information about headers
         struct ether_header *ether_h; //struct for ethernet frame
