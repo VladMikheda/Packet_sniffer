@@ -1,47 +1,49 @@
-# Sniffer paketů
+# Packet Sniffer
 
-## Popis
-Je to sniffer paketů, který bude schopen filtrovat a zachycovat pakety.
-Filtrace se provádí podle protokolu a portu, které jsou zadány uživatelem.
 
-## Překlad
-#### Pro překlad je navržen Makefile. A pro překlad je nutné využit příkaz:
+## Description
+This is a packet sniffer capable of filtering and capturing packets.
+Filtering is done based on the protocol and port specified by the user.
+
+## Compilation
+#### PA Makefile is provided for compilation. To compile, use the command:
 ```
 make
 ```
-### Spuštění
+### Execution
 ```
 sudo ./sniffer [-i|--interface arg] {-p arg} {--arp -t|--tcp --icmp} {-n arg}
 ```
-| Parametry | Popis |
+| Parameters | Description |
 |---|---|
-|-i / --interface název rozhraní na kterém bude provedena filtrace, když není zadán parametr | vypíši se list rozhraní. Jako parametr k argumentu bude využito cokoliv co jde po argumentu. Například :"-i -t" jako jméno rozhraní bude použito "-t" |  
-| -p | port podle kterého budou filtrovány pakety musí být v rozhraní od 1 do 65535 |  
-| --arp | bude filtrovat pouze tcp arp pakety |
-| -t / --tcp | bude filtrovat pouze tcp pakety |  
-| --icmp | bude filtrovat pouze icmp pakety |
-| -n | počet paketů které budou zaraženy |
-| -h / --help | bude vypsána pomocná informace a program skonči | 
+|-i / --interface | Specifies the name of the interface on which the filtering will be performed. If no parameter is provided, it will dispaly list the interfaces. Any argument after the parameter will be used as the interface name. For example, "-i -t" will use "-t" as the interface name|  
+| -p | pSpecifies the port for packet filtering. The port number must be between 1 and 65535|  
+| --arp | Filters only TCP ARP packets|
+| -t / --tcp | Filters only TCP packets |  
+| --icmp | Filters only ICMP packets |
+| -n | Specifies the number of packets to be captured |
+| -h / --help | displays usage information and exits the program | 
 
-Program může být volán bez parametru pro výpis rozhraní
-Parametry je možné kombinova
+The program can be called without any parameters to display the interfaces.    
+Parameters can be combined.
 
-### Příklady
+### Examples
 
-#### Na rozhraní _eth0_ snifferu budou poslouchat a zachycovat TCP a UDP pakety podle portu 443.
+#### Sniffer on interface eth0 capturing TCP and UDP packets on port 443.
 ```
 sudo ./sniffer -i eth0 -t -u -p 443
 ```
-#### Na rozhraní _lo_ budou zachyceny pakety typu TCP,UDP,ICMP,ARP.
+#### Sniffing on interface lo capturing packets of types TCP, UDP, ICMP, and ARP.
+
 ```
-sudo ./sniffer -l lo 
+sudo ./sniffer -i lo 
 ```
-#### Na rozhraní _eth0_ sniffer budou  poslouchat UDP a TCP pakety  podle portu 443.
+#### Sniffer on interface eth0 capturing UDP and TCP packets on port 443.
 ```
 sudo ./sniffer -i eth0  p 443
 ```
 
-### Seznam souboru
+### File List
 - Main.cpp    
 - PacketParse.cpp  
 - PacketParse.h  
